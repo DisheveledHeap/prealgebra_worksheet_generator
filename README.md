@@ -1,2 +1,30 @@
-# prealgebra_worksheet_generator
-Creating a small application for my mom that will allow her ot make simple customized worksheets for her students
+# Prealgebra Worksheet Generator
+In high school, I spent 3 years working as an instructor at a local Mathnasium in my area. As a high schooler, I always found it hard to relate to the younger students, but at the same time, I wasn't older enough than them that they saw me as a "proper adult" for them to listen to. There may have been some exceptions, but I always found it frustrating when I tried to work with a a 4th or 5th grader getting started on basic linear equations only to realize that they had "miraculously" forgotten simple arithmetic in the 2 months since I last retaught it to them.  
+
+In the modern age of technology and distractions, it's getting increasingly harder for younger students to remember and care about all the topics that they've learned in math. Something that my Mathnasium did to combat this is that along with the normal worksheets we gave to students to teach them new concepts or to work with them on whatever they were learning in school, we would do some basic review at the start of each of their sessions with us.  
+
+At first we reprinted old worksheets for 2-3 topics they had already finished to use as refreshers, but we quickly realized that for some students, they'd end up spending more time on their refresher pages than on the concepts that we actually wanted to learn those days. The problem was the same, students would see that we'd given them 2-4 whole pages to work on and were unable to concentrate long enough to do it all. The solution we found then was very simple, we handwrote custom "Warm-Up" sheets for each individual student that gave them 1-3 problems for 2-4 topics they'd already done. There was little enough work on the sheet that even the least motivated of students would be able to do it in under 10 minutes, and at the end of each sheet we would include a more conceptual question that would either tie the sheet together or got the student thinking about how the sheet tied to the concepts that we had them work on afterwards.  
+
+The system worked so well for the 4-7th graders that we started giving warm ups to the younger students as well. For the younger students, we usually had at most 8 questions, and we replaced the conceptual question with something like "How was your day?" but it was short enough that it consistiently got the students in a mindset where they could start actively working.  
+
+The problem that we then faced was that it took so long to create the warm-ups that we ended up spending less time curating what we wanted the students to work on during the rest of their session. In spite of this, I rather liked the system, so when I came home for summer break this year and talked to my old boss, I was dissapointed when she told me that they had to go back to a combo system with reprinted pages.  
+
+## My Solution
+To allow my Mathnasium to go back to giving personalized warm-ups, without sacrificing time spent on the students' actual learning plans, I'm creating a program to generate the warm ups from classic parameters.  
+
+The program will create worksheets with problems split into 3/4 sections with the following options for sections.  
+
+| Topic                     | Customizable Options                                                                                                                                          |
+|---------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Addition                  | $1d+1d$ large format for small children<br>$2d+2d$ w/o carrying<br>Variable amount of digits w/carrying<br>Find missing operator in $2d+2d$                   |
+| Subtraction               | Same options as addition, but replace carrying with borrowing                                                                                                 |
+| Multiplication            | Variable digits (up to 6 digits in either multiplicand if user wants it displayed vertically, max 4 for horizontally)                                         |
+| Division                  | User chooses whether to allow remainder<br>Long division of up to $8d\div3d$<br>Horizontal division of up to $5d\div2d$                                       |
+| Count by number           | Have students fill in a pattern/blank number line<br>User can specify whether the $\Delta$ is given<br>User chooses how many terms need to be found/are given |
+| Finding Factors/Multiples | Have students find factors/multiples of numbers with a user-selected amount of distinct prime factors                                                         |
+| Fraction Operations       | All 4 main operations with proper and improper fractions, with options to display improper fractions as mixed numbers                                         |
+| Decimal Operations        | All 4 main operations with a user chosen amount of digits after the decimal                                                                                   |
+| Proportions               | Simple $ \frac {a} {b} = \frac {c} {d} $ proportions with either a or b as missing variable, user selects ranges for other 3                                  |
+| Order of Operations       | User can choose either MDAS mode or PEMDAS mode, and number of steps up to 6                                                                                  |
+| Solving basic exponents   | User can generate simple squares & cubes or higher powers of 2, 3, or 10                                                                                      |
+| Basic linear equations    | User can choose between $ax=b$ or $x+a=b$ style equations                                                                                                     |
