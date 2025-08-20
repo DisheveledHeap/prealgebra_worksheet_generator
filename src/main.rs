@@ -145,7 +145,7 @@ impl eframe::App for TypstApp {
                             ui.add_space(4.0);
                             
                             if ui.button("Compile").clicked() {
-                                match compile_typst_to_pdf(&self.input, self.tmp_dir.path(), &self.problems) {
+                                match compile_typst_to_pdf(self.tmp_dir.path(), &self.problems) {
                                     Ok(image) => {
                                         self.preview = Some(ctx.load_texture(
                                             "preview",
@@ -196,6 +196,47 @@ impl eframe::App for TypstApp {
                 // Right: PDF preview
                 columns[1].group(|ui| {
                     ui.label("PDF Preview");
+                    ui.columns(2, |columns| {
+                        if columns[0].button("Download PDF").clicked() {
+                            if let Some(path) = rfd::FileDialog::new().set_file_name("worksheet.pdf").save_file() {
+                                let cur = self.tmp_dir.path().join("output.pdf");
+                                if let Err(e) = std::fs::copy(&cur,&path) {
+                                    self.error = Some(format!("Failed to save pdf {}",e));
+                                }
+                            }
+                        }
+
+                        if columns[1].button("Print PDF").clicked() {
+                            let cur = self.tmp_dir.path().join("output.pdf");
+
+                            let result = {
+                                #[cfg(target_os = "windows")]
+                                {
+                                    std::process::Command::new("rundll32")
+                                        .args(["shell32.dll,PrintTo", cur.to_str().unwrap()])
+                                        .spawn()
+                                }
+
+                                #[cfg(target_os = "macos")]
+                                {
+                                    std::process::Command::new("open")
+                                        .arg(cur.to_str().unwrap())
+                                        .spawn()
+                                }
+
+                                #[cfg(target_os = "linux")]
+                                {
+                                    std::process::Command::new("lp")
+                                        .arg(cur.to_str().unwrap())
+                                        .spawn()
+                                }
+                            };
+
+                            if let Err(e) = result {
+                                self.error = Some(format!("Failed to print: {}", e));
+                            }
+                        }
+                    });
                     if let Some(texture) = &self.preview {
                         let available_size = ui.available_size();
                         let original_size = texture.size_vec2();
@@ -244,7 +285,7 @@ impl eframe::App for TypstApp {
     }
 }
 
-fn compile_typst_to_pdf(user_input: &str, tmp: &Path, problems: &Vec<MathProblem>) -> Result<image::RgbaImage, String> {
+fn compile_typst_to_pdf(tmp: &Path, problems: &Vec<MathProblem>) -> Result<image::RgbaImage, String> {
     println!("path is {}",tmp.display());
     fs::create_dir_all(&tmp).map_err(|e| e.to_string())?;
 
