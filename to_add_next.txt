@@ -1,0 +1,11 @@
+direct percent
+finish implementing long division and large format operations
+fractions/mixed number operations
+implement randomization
+make 4op work with decimals
+
+also include page fill?
+
+notes for randomization
+allow ranges to include negatives
+use a toggle for whether answer can be negative
