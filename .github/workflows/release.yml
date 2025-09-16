@@ -4,6 +4,25 @@ on:
   push:
     tags:
       - "v*.*"   # e.g. v1.0.0
+  release:
+      needs: build
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/download-artifact@v4
+          with:
+            name: ${{ github.event.repository.name }}-Linux
+        - uses: actions/download-artifact@v4
+          with:
+            name: ${{ github.event.repository.name }}-Windows
+        - uses: actions/download-artifact@v4
+          with:
+            name: ${{ github.event.repository.name }}-macOS
+        - name: Create Release
+          uses: softprops/action-gh-release@v2
+          with:
+            files: |
+              *.zip
+              *.tar.gz
 
 jobs:
   build:
@@ -58,22 +77,3 @@ jobs:
         with:
           name: ${{ github.event.repository.name }}-${{ runner.os }}
           path: ${{ github.event.repository.name }}-${{ runner.os }}.*
-    release:
-      needs: build
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/download-artifact@v4
-          with:
-            name: ${{ github.event.repository.name }}-Linux
-        - uses: actions/download-artifact@v4
-          with:
-            name: ${{ github.event.repository.name }}-Windows
-        - uses: actions/download-artifact@v4
-          with:
-            name: ${{ github.event.repository.name }}-macOS
-        - name: Create Release
-          uses: softprops/action-gh-release@v2
-          with:
-            files: |
-              *.zip
-              *.tar.gz
