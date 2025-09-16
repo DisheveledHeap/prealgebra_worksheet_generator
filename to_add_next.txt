@@ -1,11 +1,12 @@
-direct percent
-finish implementing long division and large format operations
-fractions/mixed number operations
-implement randomization
-make 4op work with decimals
+implement font size options - make default large font
+implement spacing between problems
+finish implementing long division and large format operations - formatting for long division, vertically oriented problems, and direct %
+fractions/mixed number operations - implementing randomization for fractions & decimals
+finish implementing printing
 
+
+
+optional:
+% for each 100 instead of direct
+have button to regenerate questions
 also include page fill?
-
-notes for randomization
-allow ranges to include negatives
-use a toggle for whether answer can be negative

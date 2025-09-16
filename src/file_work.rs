@@ -4,6 +4,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use pdfium_render::prelude::*;
+use tempfile::TempDir;
 
 pub fn compile_typst_to_pdf(tmp: &Path, problems: &Vec<MathProblem>) -> Result<image::RgbaImage, String> {
     // println!("path is {}",tmp.display());
@@ -20,11 +21,23 @@ pub fn compile_typst_to_pdf(tmp: &Path, problems: &Vec<MathProblem>) -> Result<i
 
 
     // Build the Typst source
-    let problems_typst = problems.iter()
-        .map(|p| format!("#block[{}]", p.display())).collect::<Vec<_>>().join("\n");
+
+    let (left_problems, right_problems):(Vec<String>,Vec<String>) = problems.iter().enumerate()
+        .fold((Vec::new(), Vec::new()), |(mut l,mut r),(i,p)| {
+            let block = format!("#block[{}]", p.display());
+            if (i % 2) == 0 {
+                l.push(block);
+            } else {r.push(block);}
+            (l,r)
+        });
+
+    let (left_typst, right_typst) = (left_problems.join("\n"), right_problems.join("\n"));
+
     let content = format!(
-        "#import \"worksheet.typ\": *\n\n#set text(size: 15pt)\n\n#columns(2)[\n{}\n]",
-        problems_typst
+        "#import \"worksheet.typ\": *\n\n\
+        #set text(size: 15pt)\n\n\
+        #columns(2)[{}][{}]",
+        left_typst, right_typst
     );
 
     let mut file = File::create(&typst_path).map_err(|e| e.to_string())?;
@@ -49,4 +62,20 @@ pub fn compile_typst_to_pdf(tmp: &Path, problems: &Vec<MathProblem>) -> Result<i
     let image = page.render(1275,1650,None).map_err(|e| e.to_string())?.as_image();
 
     Ok(image.to_rgba8())
+}
+
+pub fn save_sheet(temp_dir:&TempDir, error:&mut Option<String>) {
+    if let Some(path) = rfd::FileDialog::new().set_file_name("worksheet.pdf").save_file() {
+        let cur = temp_dir.path().join("output.pdf");
+        if let Err(e) = std::fs::copy(&cur,&path) {
+            *error = Some(format!("Failed to save pdf {}",e));
+        }
+    }
+}
+
+pub fn print_sheet(temp_dir:&TempDir) {
+    if let Some(path) = rfd::FileDialog::new().set_file_name("worksheet.pdf").save_file() {
+        let cur = temp_dir.path().join("output.pdf");
+        
+    }
 }

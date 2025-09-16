@@ -1,5 +1,5 @@
 use crate::problems::*;
-use crate::file_work::compile_typst_to_pdf;
+use crate::file_work::*;
 use eframe::egui;
 use egui::{vec2, Align2};
 use std::usize;
@@ -16,7 +16,7 @@ pub struct TypstApp {
     problem_editing: usize,
     editing_problem: bool,
     temp_problem: MathProblem,
-    copies: String,
+    copies: usize,
 }
 
 impl Default for TypstApp {
@@ -30,7 +30,7 @@ impl Default for TypstApp {
             problem_editing: 0,
             editing_problem: false,
             temp_problem: MathProblem::new(),
-            copies: String::new(),
+            copies: 1,
         }
     }
 }
@@ -80,11 +80,16 @@ impl eframe::App for TypstApp {
                                 self.editing_problem = true;
                                 self.temp_problem = MathProblem::new();
                                 self.temp_problem.randomized = self.randomizing;
-                                self.copies = String::from("1");
+                                self.copies = 1;
+                            }
+                            if ui.button("Regenerate All Terms").clicked() {
+                                for i in 0..self.problems.len() {
+                                    if self.problems[i].randomized {self.problems[i].generate();}
+                                }
                             }
                             ui.label("Problems Created:");
                             egui::Grid::new("problems_grid")
-                                .num_columns(4)
+                                .num_columns(5)
                                 .striped(true)
                                 .show(ui, |ui| {
                                     for i in 0..self.problems.len() {
@@ -97,12 +102,19 @@ impl eframe::App for TypstApp {
                                         }
 
                                         if ui.button("Dup").clicked() {
-                                            let temp_problem = self.problems[i].clone();
+                                            let mut temp_problem = self.problems[i].clone();
+                                            if temp_problem.randomized {temp_problem.generate();}
                                             self.problems.insert(i, temp_problem);
                                         }
 
                                         if ui.button("Delete").clicked() {
                                             self.problems.remove(i);
+                                        }
+
+                                        if self.problems[i].randomized {
+                                            if ui.button("Regenerate Terms").clicked() {
+                                                self.problems[i].generate();
+                                            }
                                         }
 
                                         ui.end_row();
@@ -116,43 +128,37 @@ impl eframe::App for TypstApp {
                     ui.label("PDF Preview");
                     ui.columns(2, |columns| {
                         if columns[0].button("Download PDF").clicked() {
-                            if let Some(path) = rfd::FileDialog::new().set_file_name("worksheet.pdf").save_file() {
-                                let cur = self.tmp_dir.path().join("output.pdf");
-                                if let Err(e) = std::fs::copy(&cur,&path) {
-                                    self.error = Some(format!("Failed to save pdf {}",e));
-                                }
-                            }
+                            save_sheet(&self.tmp_dir, &mut self.error);
                         }
 
                         if columns[1].button("Print PDF").clicked() {
-                            let cur = self.tmp_dir.path().join("output.pdf");
+                            print_sheet(&self.tmp_dir);
+                            // let result = {
+                            //     #[cfg(target_os = "windows")]
+                            //     {
+                            //         std::process::Command::new("rundll32")
+                            //             .args(["shell32.dll,PrintTo", cur.to_str().unwrap()])
+                            //             .spawn()
+                            //     }
 
-                            let result = {
-                                #[cfg(target_os = "windows")]
-                                {
-                                    std::process::Command::new("rundll32")
-                                        .args(["shell32.dll,PrintTo", cur.to_str().unwrap()])
-                                        .spawn()
-                                }
+                            //     #[cfg(target_os = "macos")]
+                            //     {
+                            //         std::process::Command::new("lp")
+                            //             .arg(cur.to_str().unwrap())
+                            //             .spawn()
+                            //     }
 
-                                #[cfg(target_os = "macos")]
-                                {
-                                    std::process::Command::new("lp")
-                                        .arg(cur.to_str().unwrap())
-                                        .spawn()
-                                }
+                            //     #[cfg(target_os = "linux")]
+                            //     {
+                            //         std::process::Command::new("lp")
+                            //             .arg(cur.to_str().unwrap())
+                            //             .spawn()
+                            //     }
+                            // };
 
-                                #[cfg(target_os = "linux")]
-                                {
-                                    std::process::Command::new("lp")
-                                        .arg(cur.to_str().unwrap())
-                                        .spawn()
-                                }
-                            };
-
-                            if let Err(e) = result {
-                                self.error = Some(format!("Failed to print: {}", e));
-                            }
+                            // if let Err(e) = result {
+                            //     self.error = Some(format!("Failed to print: {}", e));
+                            // }
                         }
                     });
                     if let Some(texture) = &self.preview {
@@ -179,7 +185,7 @@ impl eframe::App for TypstApp {
                                 for &pt in ImplementedProblem::iterator() {
                                     if ui.radio_value(&mut self.temp_problem.problem_type, pt, format!("{pt}")).clicked() {
                                         while self.temp_problem.terms.len() < pt.required_operands() {
-                                            self.temp_problem.terms.push(String::new());
+                                            self.temp_problem.terms.push(Term::default());
                                         }
                                     }
                                 }
@@ -188,13 +194,27 @@ impl eframe::App for TypstApp {
                         columns[1].group(|ui| {
                             if self.temp_problem.problem_type == ImplementedProblem::MoreToCome {
                                 ui.label("Choose a Problem Type from the radio menu");
-                            }
+                            } else {
 
-                            if ui.checkbox(&mut self.temp_problem.randomized, "Randomize Terms").clicked() {
-                                self.randomizing = self.temp_problem.randomized;
-                            }
+                                if ui.checkbox(&mut self.temp_problem.randomized, "Randomize Terms").clicked() {
+                                    self.randomizing = self.temp_problem.randomized;
+                                }
+                                if ui.checkbox(&mut self.temp_problem.allow_fractions, "Allow Fractions").clicked() {
+                                    self.temp_problem.allow_decimals = false;
+                                }
 
-                            if self.randomizing {
+                                if self.temp_problem.randomized {
+                                    if self.temp_problem.allow_decimals {
+                                        ui.label("Amount of digits after decimal:");
+                                        ui.add(egui::DragValue::new(&mut self.temp_problem.digits_after_decimal));
+                                        if self.temp_problem.digits_after_decimal == 0 {self.temp_problem.allow_decimals = false;}
+                                    } else {
+                                        if ui.checkbox(&mut self.temp_problem.allow_decimals, "Allow Decimals").clicked() {
+                                            self.temp_problem.allow_fractions = false;
+                                            self.temp_problem.digits_after_decimal = 2;
+                                        }
+                                    }
+                                }
 
                                 if self.temp_problem.problem_type.requires_operation() {
                                     ui.label("Choose Operation");
@@ -213,24 +233,49 @@ impl eframe::App for TypstApp {
                                     }
                                 }
 
-                                for (i, l) in self.temp_problem.problem_type.fields().iter().enumerate() {
-                                    ui.label(l);
-                                    ui.add(egui::TextEdit::singleline(&mut self.temp_problem.terms[i]));
-                                    //try to implement some form of input sanitization here
+                                if self.randomizing {
+                                    match self.temp_problem.problem_type {
+                                        ImplementedProblem::LargeFormatFourOp(BasicOperation::Subtraction)
+                                        | ImplementedProblem::MissingOperand(BasicOperation::Subtraction)
+                                        | ImplementedProblem::FourOp(BasicOperation::Subtraction) => {ui.checkbox(&mut self.temp_problem.auxillary, "Allow Negative Result");},
+                                        ImplementedProblem::ShortDiv | ImplementedProblem::LongDiv => {if !(self.temp_problem.allow_decimals | self.temp_problem.allow_fractions) {ui.checkbox(&mut self.temp_problem.auxillary, "Allow Remainder");}},
+                                        ImplementedProblem::DirectPercent => {ui.checkbox(&mut self.temp_problem.auxillary, "For Each 100");},
+                                        _ => {}
+                                    };
+                                    ui.label("Lower Bound");
+                                    ui.add(egui::DragValue::new(&mut self.temp_problem.lower_bound));
+                                    ui.label("Upper Bound");
+                                    ui.add(egui::DragValue::new(&mut self.temp_problem.upper_bound));
+                                    ui.label("Copies of this problem");
+                                    ui.add(egui::DragValue::new(&mut self.copies).range(1..=30));
+                                } else {
+                                    for (i, l) in self.temp_problem.problem_type.fields().iter().enumerate() {
+                                        ui.label(l);
+                                        ui.add(egui::TextEdit::singleline(&mut self.temp_problem.terms[i].whole));
+                                        if self.temp_problem.allow_fractions {
+                                            ui.label("Numerator");
+                                            ui.add(egui::DragValue::new(&mut self.temp_problem.terms[i].numerator));
+                                            ui.label("Denominator");
+                                            ui.add(egui::DragValue::new(&mut self.temp_problem.terms[i].denominator));
+                                        }
+                                    }
                                 }
-                            } else {
-                                
                             }
-
-
                         });
                     });
 
                     if ui.button("Update Problem").clicked() {
                         if self.problem_editing == usize::MAX {
-                            self.problems.append(&mut vec![self.temp_problem.clone(); self.copies.parse::<usize>().unwrap_or(1)]);
+                            let mut to_add = vec![self.temp_problem.clone(); self.copies];
+                            if self.temp_problem.randomized {
+                                for i in 0..to_add.len() {
+                                    to_add[i].generate();
+                                }
+                            }
+                            self.problems.append(&mut to_add);
                             self.editing_problem = false;
                         } else {
+                            if self.temp_problem.randomized {self.temp_problem.generate();}
                             self.problems[self.problem_editing] = self.temp_problem.clone();
                             self.editing_problem = false;
                         }
