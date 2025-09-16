@@ -22,22 +22,17 @@ pub fn compile_typst_to_pdf(tmp: &Path, problems: &Vec<MathProblem>) -> Result<i
 
     // Build the Typst source
 
-    let (left_problems, right_problems):(Vec<String>,Vec<String>) = problems.iter().enumerate()
-        .fold((Vec::new(), Vec::new()), |(mut l,mut r),(i,p)| {
-            let block = format!("#block[{}]", p.display());
-            if (i % 2) == 0 {
-                l.push(block);
-            } else {r.push(block);}
-            (l,r)
-        });
+    let grid_cells: Vec<String> = problems.iter()
+        .map(|p| format!("#block[{}]", p.display()))
+        .collect();
 
-    let (left_typst, right_typst) = (left_problems.join("\n"), right_problems.join("\n"));
-
+    // Now wrap each cell in `#grid` in a 2-column layout
+    // Typst will automatically fill rows left-to-right
     let content = format!(
         "#import \"worksheet.typ\": *\n\n\
         #set text(size: 15pt)\n\n\
-        #columns(2)[{}][{}]",
-        left_typst, right_typst
+        #grid(columns: 2)[\n{}\n]",
+        grid_cells.join("\n")
     );
 
     let mut file = File::create(&typst_path).map_err(|e| e.to_string())?;

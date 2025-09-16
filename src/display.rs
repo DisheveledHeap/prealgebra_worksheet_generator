@@ -242,12 +242,46 @@ impl eframe::App for TypstApp {
                                         ImplementedProblem::DirectPercent => {ui.checkbox(&mut self.temp_problem.auxillary, "For Each 100");},
                                         _ => {}
                                     };
+
+                                    if matches!(self.temp_problem.problem_type, ImplementedProblem::ShortDiv | ImplementedProblem::LongDiv) {
+                                        ui.checkbox(&mut self.temp_problem.separate_bounds, "Use Different Ranges");
+                                        if self.temp_problem.separate_bounds {
+                                            ui.label("Dividend Range");
+                                            ui.label("Lower Bound");
+                                            ui.add(egui::DragValue::new(&mut self.temp_problem.main_bound.aux_lower));
+                                            ui.label("Upper Bound");
+                                            ui.add(egui::DragValue::new(&mut self.temp_problem.main_bound.aux_upper));
+                                            ui.label("Divisor Range");
+                                        }
+                                    }
+
+                                    if matches!(self.temp_problem.problem_type, ImplementedProblem::DirectPercent) {
+                                        ui.checkbox(&mut self.temp_problem.separate_bounds, "Use Different Ranges");
+                                        if self.temp_problem.separate_bounds {
+                                            ui.label("Percentage Range");
+                                            ui.label("Lower Bound");
+                                            ui.add(egui::DragValue::new(&mut self.temp_problem.main_bound.aux_lower));
+                                            ui.label("Upper Bound");
+                                            ui.add(egui::DragValue::new(&mut self.temp_problem.main_bound.aux_upper));
+                                            ui.label("Whole Range");
+                                        }
+                                    }
+
                                     ui.label("Lower Bound");
-                                    ui.add(egui::DragValue::new(&mut self.temp_problem.lower_bound));
+                                    ui.add(egui::DragValue::new(&mut self.temp_problem.main_bound.main_lower));
                                     ui.label("Upper Bound");
-                                    ui.add(egui::DragValue::new(&mut self.temp_problem.upper_bound));
-                                    ui.label("Copies of this problem");
-                                    ui.add(egui::DragValue::new(&mut self.copies).range(1..=30));
+                                    ui.add(egui::DragValue::new(&mut self.temp_problem.main_bound.main_upper));
+
+                                    if self.temp_problem.allow_fractions {
+                                        ui.label("Max Denominator");
+                                        ui.add(egui::DragValue::new(&mut self.temp_problem.main_bound.denom_upper));
+                                    }
+
+                                    if self.problem_editing == usize::MAX {
+                                        ui.label("Copies of this problem");
+                                        ui.add(egui::DragValue::new(&mut self.copies).range(1..=30));
+                                    }
+
                                 } else {
                                     for (i, l) in self.temp_problem.problem_type.fields().iter().enumerate() {
                                         ui.label(l);
@@ -260,6 +294,7 @@ impl eframe::App for TypstApp {
                                         }
                                     }
                                 }
+                                //font size and spacing will look most natural here
                             }
                         });
                     });

@@ -111,7 +111,7 @@ pub struct Bound {
     pub main_upper: i32,
     pub aux_lower: i32,
     pub aux_upper:i32,
-    pub denom_upper:u8,
+    pub denom_upper:u32,
 }
 
 impl Bound {
@@ -135,7 +135,7 @@ pub struct Term {
 
 impl fmt::Display for Term {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.denominator == 0 {
+        if (self.denominator == 0) | (self.numerator == 0) {
             write!(f, "{}", self.whole)
         } else {
             write!(f, "{} ({}) / ({})", self.whole, self.numerator, self.denominator)
@@ -167,10 +167,9 @@ pub struct MathProblem {
     pub auxillary: bool,
     pub allow_fractions: bool,
     pub allow_decimals: bool,
-    pub digits_after_decimal: u8,
+    pub digits_after_decimal: u32,
     pub main_bound: Bound,
-    pub lower_bound: i32,
-    pub upper_bound: i32,
+    pub separate_bounds: bool,
     pub problem_type: ImplementedProblem,
     pub terms: Vec<Term>,
 }
@@ -184,19 +183,48 @@ impl MathProblem {
             allow_decimals: false,
             digits_after_decimal: 0,
             main_bound: Bound::new(),
-            lower_bound: 0,
-            upper_bound: 100,
+            separate_bounds: false,
             problem_type: ImplementedProblem::MoreToCome,
             terms: Vec::new(),
         }
     }
 
-    fn gen_term(&self) -> String {
-        return String::new();
+    fn gen_term(&self) -> Term {
+        if self.allow_decimals {
+            let mut operand = random_range((self.main_bound.main_lower as f32)..(self.main_bound.main_upper as f32));
+            operand *= 10u8.pow(self.digits_after_decimal) as f32;
+            operand = operand.round();
+            operand /= 10u8.pow(self.digits_after_decimal) as f32;
+            return Term::new(operand.to_string());
+        }
+        let mut t = Term::default();
+        t.whole = random_range(self.main_bound.main_lower..self.main_bound.main_upper).to_string();
+
+        if self.allow_fractions {
+            t.denominator = random_range(2..self.main_bound.denom_upper);
+            t.numerator = random_range(0..t.denominator);
+        }
+
+        return t;
     }
 
-    fn gen_aux_term(&self) -> String {
-        return String::new();
+    fn gen_aux_term(&self) -> Term {
+        if self.allow_decimals {
+            let mut operand = random_range((self.main_bound.aux_lower as f32)..(self.main_bound.aux_upper as f32));
+            operand *= 10u8.pow(self.digits_after_decimal) as f32;
+            operand = operand.round();
+            operand /= 10u8.pow(self.digits_after_decimal) as f32;
+            return Term::new(operand.to_string());
+        }
+        let mut t = Term::default();
+        t.whole = random_range(self.main_bound.aux_lower..self.main_bound.aux_upper).to_string();
+
+        if self.allow_fractions {
+            t.denominator = random_range(2..self.main_bound.denom_upper);
+            t.numerator = random_range(0..t.denominator);
+        }
+
+        return t;
     }
 
     pub fn generate(&mut self) {
@@ -206,25 +234,39 @@ impl MathProblem {
             ImplementedProblem::LargeFormatFourOp(BasicOperation::Subtraction)
             | ImplementedProblem::MissingOperand(BasicOperation::Subtraction)
             | ImplementedProblem::FourOp(BasicOperation::Subtraction) => {if !self.auxillary {
-                    let operand = random_range(self.lower_bound..self.upper_bound);
-                    vec![Term::new(operand.to_string()), Term::new(random_range(self.lower_bound..operand).to_string())]
-                } else {vec![Term::new(random_range(self.lower_bound..self.upper_bound).to_string()),Term::new(random_range(self.lower_bound..self.upper_bound).to_string())]}
+                    let operand = random_range(self.main_bound.main_lower..self.main_bound.main_upper);
+                    vec![Term::new(operand.to_string()), Term::new(random_range(self.main_bound.main_lower..operand).to_string())]
+                } else {vec![self.gen_term(), self.gen_term()]}
             },
             ImplementedProblem::ShortDiv | ImplementedProblem::LongDiv => {
-                let divisor = random_range(self.lower_bound..self.upper_bound);
-                if self.auxillary {
-                    vec![Term::new(random_range(divisor..self.upper_bound).to_string()), Term::new(divisor.to_string())]
-                } else {vec![Term::new((divisor * random_range(self.lower_bound..self.upper_bound)).to_string()), Term::new(divisor.to_string())]}
+                if !(self.allow_decimals | self.allow_fractions | self.auxillary) {
+                    let divisor = random_range(self.main_bound.main_lower..self.main_bound.main_upper);
+                    if self.separate_bounds {
+                        vec![Term::new((divisor * random_range(self.main_bound.aux_lower..self.main_bound.aux_upper)).to_string()), Term::new(divisor.to_string())]
+                    } else {
+                        vec![Term::new((divisor * random_range(self.main_bound.main_lower..self.main_bound.main_upper)).to_string()), Term::new(divisor.to_string())]
+                    }
+                } else {
+                    if self.separate_bounds {
+                        vec![self.gen_aux_term(), self.gen_term()]
+                    } else {
+                        vec![self.gen_term(), self.gen_term()]
+                    }
+                }
             },
             ImplementedProblem::Proportions => {
-                let mut terms = (0..4).map(|_| Term::new(random_range(self.lower_bound..self.upper_bound).to_string())).collect::<Vec<Term>>();
+                let mut terms = (0..4).map(|_| self.gen_term()).collect::<Vec<Term>>();
                 terms[random_range(0..4)] = Term::new(String::from("x"));
                 terms
             },
-            // ImplementedProblem::DirectPercent => {
-
-            // },
-            _ => (0..self.problem_type.required_operands()).map(|_| Term::new(random_range(self.lower_bound..self.upper_bound).to_string())).collect::<Vec<Term>>()
+            ImplementedProblem::DirectPercent => {
+                if self.separate_bounds {
+                    vec![self.gen_aux_term(), self.gen_term()]
+                } else {
+                    vec![self.gen_term(), self.gen_term()]
+                }
+            },
+            _ => (0..self.problem_type.required_operands()).map(|_| self.gen_term()).collect::<Vec<Term>>()
         }
 
     }
@@ -238,6 +280,7 @@ impl MathProblem {
             // ImplementedProblem::LongDiv => format!("${}overline(|{})$", self.terms[1], self.terms[0]),
             ImplementedProblem::ShortDiv => format!("${} ÷ {} = \\_\\_\\_$", self.terms[0], self.terms[1]),
             ImplementedProblem::Proportions => format!("$({})/({}) = ({})/({})$", self.terms[0], self.terms[1], self.terms[2], self.terms[3]),
+            ImplementedProblem::DirectPercent => format!("${}% \"of\" {} \"is\" \\_\\_\\_$", self.terms[0], self.terms[1]),
             _ => format!("Unimplemented problem type: {} with parameters {:?}", self.problem_type, self.terms)
         }
     }
