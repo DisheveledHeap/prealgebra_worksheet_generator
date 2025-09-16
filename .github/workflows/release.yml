@@ -24,6 +24,7 @@ jobs:
         run: cargo build --release
 
       - name: Bundle assets
+        shell: bash
         run: |
           mkdir dist
           cp -r assets dist/assets
@@ -34,6 +35,7 @@ jobs:
           fi
 
       - name: Create archive
+        shell: bash
         run: |
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             7z a ${{ github.event.repository.name }}-${{ runner.os }}.zip ./dist/*
