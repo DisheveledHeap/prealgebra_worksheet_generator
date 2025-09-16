@@ -1,0 +1,79 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"   # e.g. v1.0.0
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install Rust
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      # Build release binary
+      - name: Build
+        run: cargo build --release
+
+      # Copy assets
+      - name: Bundle assets
+        run: |
+          mkdir dist
+          cp -r assets dist/assets
+          cp target/release/${{ github.event.repository.name }} dist/
+
+      # Copy PDFium and Typst per platform
+      # - name: Bundle PDFium + Typst
+      #   run: |
+      #     if [[ "$RUNNER_OS" == "Linux" ]]; then
+      #       cp assets/bin/libpdfium.so dist/
+      #       cp assets/bin/typst dist/
+      #     elif [[ "$RUNNER_OS" == "Windows" ]]; then
+      #       cp assets/bin/pdfium.dll dist/
+      #       cp assets/bin/typst.exe dist/
+      #     elif [[ "$RUNNER_OS" == "macOS" ]]; then
+      #       cp assets/bin/libpdfium.dylib dist/
+      #       cp assets/bin/typst dist/
+      #     fi
+
+      # Archive result
+      - name: Create archive
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            7z a ${{ github.event.repository.name }}-${{ runner.os }}.zip ./dist/*
+          else
+            tar czf ${{ github.event.repository.name }}-${{ runner.os }}.tar.gz -C dist .
+          fi
+
+      # Upload artifact for release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}-${{ runner.os }}
+          path: ${{ github.event.repository.name }}-${{ runner.os }}.*
+    release:
+      needs: build
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/download-artifact@v4
+          with:
+            name: ${{ github.event.repository.name }}-Linux
+        - uses: actions/download-artifact@v4
+          with:
+            name: ${{ github.event.repository.name }}-Windows
+        - uses: actions/download-artifact@v4
+          with:
+            name: ${{ github.event.repository.name }}-macOS
+        - name: Create Release
+          uses: softprops/action-gh-release@v2
+          with:
+            files: |
+              *.zip
+              *.tar.gz
