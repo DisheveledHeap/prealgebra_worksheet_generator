@@ -21,18 +21,23 @@ pub fn compile_typst_to_pdf(tmp: &Path, problems: &Vec<MathProblem>) -> Result<i
 
 
     // Build the Typst source
-
-    let grid_cells: Vec<String> = problems.iter()
-        .map(|p| format!("#block[{}]", p.display()))
-        .collect();
-
+    let (left_problems, right_problems):(Vec<String>,Vec<String>) = problems.iter().enumerate()
+        .fold((Vec::new(), Vec::new()), |(mut l,mut r),(i,p)| {
+            let block = format!("#block[{}]", p.display());
+            if (i % 2) == 0 { l.push(block); }
+            else {r.push(block);}
+            (l,r)
+        });
+        
+    let (left_typst, right_typst) = (left_problems.join("\n"), right_problems.join("\n"));
+        
     // Now wrap each cell in `#grid` in a 2-column layout
     // Typst will automatically fill rows left-to-right
     let content = format!(
         "#import \"worksheet.typ\": *\n\n\
-        #set text(size: 15pt)\n\n\
-        #grid(columns: 2)[\n{}\n]",
-        grid_cells.join("\n")
+        #set text(size: 25pt)\n\n\
+        #stack(dir: ltr, [#box(width: 50%)[\n{}\n]],\n[#box(width: 50%)[\n{}\n]])",
+        left_typst, right_typst
     );
 
     let mut file = File::create(&typst_path).map_err(|e| e.to_string())?;
@@ -71,6 +76,6 @@ pub fn save_sheet(temp_dir:&TempDir, error:&mut Option<String>) {
 pub fn print_sheet(temp_dir:&TempDir) {
     if let Some(path) = rfd::FileDialog::new().set_file_name("worksheet.pdf").save_file() {
         let cur = temp_dir.path().join("output.pdf");
-        
+        println!("{:?}", temp_dir);
     }
 }

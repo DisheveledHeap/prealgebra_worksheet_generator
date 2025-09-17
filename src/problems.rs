@@ -168,6 +168,8 @@ pub struct MathProblem {
     pub allow_fractions: bool,
     pub allow_decimals: bool,
     pub digits_after_decimal: u32,
+    pub spacing: u8,
+    pub font_size: u8,
     pub main_bound: Bound,
     pub separate_bounds: bool,
     pub problem_type: ImplementedProblem,
@@ -182,6 +184,8 @@ impl MathProblem {
             allow_fractions: false,
             allow_decimals: false,
             digits_after_decimal: 0,
+            spacing: 5,
+            font_size: 25,
             main_bound: Bound::new(),
             separate_bounds: false,
             problem_type: ImplementedProblem::MoreToCome,
@@ -274,14 +278,17 @@ impl MathProblem {
     pub fn display(&self) -> String {
         if self.problem_type.required_operands() > self.terms.len() {return String::from("Error Occurred");}
 
-        match self.problem_type {
+        let body:String = match self.problem_type {
             ImplementedProblem::FourOp(o) => format!("${} {} {} = \\_\\_\\_$", self.terms[0], o, self.terms[1]),
             ImplementedProblem::MissingOperand(o) => format!("${} {} \\_\\_\\_ = {}$", self.terms[0], o, self.terms[1]),
+            ImplementedProblem::LargeFormatFourOp(o) => format!("#set align(right)\n#stack(dir: ttb, spacing: 2pt, [{}], math.underline([{}{}]))", self.terms[0], o, self.terms[1]),
             // ImplementedProblem::LongDiv => format!("${}overline(|{})$", self.terms[1], self.terms[0]),
             ImplementedProblem::ShortDiv => format!("${} ÷ {} = \\_\\_\\_$", self.terms[0], self.terms[1]),
             ImplementedProblem::Proportions => format!("$({})/({}) = ({})/({})$", self.terms[0], self.terms[1], self.terms[2], self.terms[3]),
             ImplementedProblem::DirectPercent => format!("${}% \"of\" {} \"is\" \\_\\_\\_$", self.terms[0], self.terms[1]),
             _ => format!("Unimplemented problem type: {} with parameters {:?}", self.problem_type, self.terms)
-        }
+        };
+
+        format!("#set text (size: {}pt)\n{body}\n#v({}pt)",self.font_size, self.spacing)
     }
 }

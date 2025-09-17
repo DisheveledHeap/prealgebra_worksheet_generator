@@ -93,6 +93,7 @@ impl eframe::App for TypstApp {
                                 .striped(true)
                                 .show(ui, |ui| {
                                     for i in 0..self.problems.len() {
+                                        if i >= self.problems.len() {break;}
                                         ui.label(format!("Problem {i}"));
                                         
                                         if ui.button("Edit").clicked() {
@@ -109,6 +110,7 @@ impl eframe::App for TypstApp {
 
                                         if ui.button("Delete").clicked() {
                                             self.problems.remove(i);
+                                            continue;
                                         }
 
                                         if self.problems[i].randomized {
