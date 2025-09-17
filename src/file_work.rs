@@ -8,8 +8,16 @@ use tempfile::TempDir;
 
 
 fn project_root() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    if cfg!(debug_assertions) {
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    } else {
+        std::env::current_exe()
+            .ok()
+            .and_then(|exe| exe.parent().map(|p| p.to_path_buf()))
+            .unwrap_or_else(|| PathBuf::from("."))
+    }
 }
+
 
 /// Returns the path to the Typst binary for the current OS.
 /// Looks inside `assets/bin/` relative to the executable.
