@@ -6,12 +6,38 @@ use std::process::Command;
 use pdfium_render::prelude::*;
 use tempfile::TempDir;
 
-pub fn check_dependencies() {
-    //check if the build_file did anything
-    let typst_path = env!("TYPST_PATH");
-    let pdfium_path = env!("PDFIUM_PATH");
 
-    println!("Found:\n{}\n{}", typst_path, pdfium_path);
+fn project_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+}
+
+/// Returns the path to the Typst binary for the current OS.
+/// Looks inside `assets/bin/` relative to the executable.
+pub fn get_typst_path() -> PathBuf {
+    let base = project_root();
+    let bin_dir = base.join("assets").join("bin");
+
+    #[cfg(target_os = "windows")]
+    return bin_dir.join("typst.exe");
+
+    #[cfg(not(target_os = "windows"))]
+    return bin_dir.join("typst");
+}
+
+/// Returns the path to the PDFium library for the current OS.
+/// Looks inside `assets/bin/` relative to the executable.
+pub fn get_pdfium_path() -> PathBuf {
+    let base = project_root();
+    let bin_dir = base.join("assets").join("bin");
+
+    #[cfg(target_os = "windows")]
+    return bin_dir.join("pdfium.dll");
+
+    #[cfg(target_os = "linux")]
+    return bin_dir.join("libpdfium.so");
+
+    #[cfg(target_os = "macos")]
+    return bin_dir.join("libpdfium.dylib");
 }
 
 pub fn compile_typst_to_pdf(tmp: &Path, problems: &Vec<MathProblem>) -> Result<image::RgbaImage, String> {
@@ -51,7 +77,8 @@ pub fn compile_typst_to_pdf(tmp: &Path, problems: &Vec<MathProblem>) -> Result<i
     let mut file = File::create(&typst_path).map_err(|e| e.to_string())?;
     file.write_all(content.as_bytes()).map_err(|e| e.to_string())?;
 
-    let typst = PathBuf::from(env!("TYPST_PATH"));
+    let typst:PathBuf = get_typst_path();
+    println!("{typst:?}");
 
     let output = Command::new(&typst)
         .args(["compile", typst_path.to_str().unwrap(), pdf_path.to_str().unwrap()])
@@ -63,7 +90,7 @@ pub fn compile_typst_to_pdf(tmp: &Path, problems: &Vec<MathProblem>) -> Result<i
     }
 
     // Render the first page of the PDF as an image
-    let pdfium_path = std::env::var("PDFIUM_PATH").map_err(|e| e.to_string())?;
+    let pdfium_path = get_pdfium_path();
     let pdfium = Pdfium::new(Pdfium::bind_to_library(pdfium_path).map_err(|e| e.to_string())?);
     let doc = pdfium.load_pdf_from_file(&pdf_path, None).map_err(|e| e.to_string())?;
     let page = doc.pages().get(0).map_err(|e| e.to_string())?;
