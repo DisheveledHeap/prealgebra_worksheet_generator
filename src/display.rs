@@ -208,7 +208,7 @@ impl eframe::App for TypstApp {
                                 if self.temp_problem.randomized {
                                     if self.temp_problem.allow_decimals {
                                         ui.label("Amount of digits after decimal:");
-                                        ui.add(egui::DragValue::new(&mut self.temp_problem.digits_after_decimal));
+                                        ui.add(egui::DragValue::new(&mut self.temp_problem.digits_after_decimal).range(0..=6));
                                         if self.temp_problem.digits_after_decimal == 0 {self.temp_problem.allow_decimals = false;}
                                     } else {
                                         if ui.checkbox(&mut self.temp_problem.allow_decimals, "Allow Decimals").clicked() {

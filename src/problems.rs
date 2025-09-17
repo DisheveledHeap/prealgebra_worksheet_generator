@@ -196,9 +196,10 @@ impl MathProblem {
     fn gen_term(&self) -> Term {
         if self.allow_decimals {
             let mut operand = random_range((self.main_bound.main_lower as f32)..(self.main_bound.main_upper as f32));
-            operand *= 10u8.pow(self.digits_after_decimal) as f32;
+            println!("{operand}");
+            operand *= 10u32.pow(self.digits_after_decimal) as f32;
             operand = operand.round();
-            operand /= 10u8.pow(self.digits_after_decimal) as f32;
+            operand /= 10u32.pow(self.digits_after_decimal) as f32;
             return Term::new(operand.to_string());
         }
         let mut t = Term::default();
@@ -239,7 +240,11 @@ impl MathProblem {
             | ImplementedProblem::MissingOperand(BasicOperation::Subtraction)
             | ImplementedProblem::FourOp(BasicOperation::Subtraction) => {if !self.auxillary {
                     let operand = random_range(self.main_bound.main_lower..self.main_bound.main_upper);
-                    vec![Term::new(operand.to_string()), Term::new(random_range(self.main_bound.main_lower..operand).to_string())]
+                    if operand <= self.main_bound.main_lower + 2 {
+                        vec![Term::new(random_range(operand..self.main_bound.main_upper).to_string()), Term::new(operand.to_string())]
+                    } else {
+                        vec![Term::new(operand.to_string()), Term::new(random_range(self.main_bound.main_lower..operand).to_string())]
+                    }
                 } else {vec![self.gen_term(), self.gen_term()]}
             },
             ImplementedProblem::ShortDiv | ImplementedProblem::LongDiv => {
@@ -289,6 +294,6 @@ impl MathProblem {
             _ => format!("Unimplemented problem type: {} with parameters {:?}", self.problem_type, self.terms)
         };
 
-        format!("#set text (size: {}pt)\n{body}\n#v({}pt)",self.font_size, self.spacing)
+        format!("#set text(size: {}pt)\n{body}\n#v({}pt)",self.font_size, self.spacing)
     }
 }

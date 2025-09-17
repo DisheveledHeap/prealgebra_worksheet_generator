@@ -6,6 +6,14 @@ use std::process::Command;
 use pdfium_render::prelude::*;
 use tempfile::TempDir;
 
+pub fn check_dependencies() {
+    //check if the build_file did anything
+    let typst_path = env!("TYPST_PATH");
+    let pdfium_path = env!("PDFIUM_PATH");
+
+    println!("Found:\n{}\n{}", typst_path, pdfium_path);
+}
+
 pub fn compile_typst_to_pdf(tmp: &Path, problems: &Vec<MathProblem>) -> Result<image::RgbaImage, String> {
     // println!("path is {}",tmp.display());
     fs::create_dir_all(&tmp).map_err(|e| e.to_string())?;
@@ -23,7 +31,7 @@ pub fn compile_typst_to_pdf(tmp: &Path, problems: &Vec<MathProblem>) -> Result<i
     // Build the Typst source
     let (left_problems, right_problems):(Vec<String>,Vec<String>) = problems.iter().enumerate()
         .fold((Vec::new(), Vec::new()), |(mut l,mut r),(i,p)| {
-            let block = format!("#block[{}]", p.display());
+            let block = format!("#block[\n{}\n]", p.display());
             if (i % 2) == 0 { l.push(block); }
             else {r.push(block);}
             (l,r)
