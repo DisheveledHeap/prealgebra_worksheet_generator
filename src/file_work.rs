@@ -118,7 +118,7 @@ pub fn save_sheet(temp_dir:&TempDir, error:&mut Option<String>) {
 
 pub fn print_sheet(temp_dir: &TempDir, error:&mut Option<String>) {
     let file = temp_dir.path().join("output.pdf");
-    if let Err(e) = print_dialogue(&file) {
+    if let Err(e) = print_dialog(&file) {
         *error = Some(e);
     } else {*error = None;}
 }
@@ -153,8 +153,9 @@ pub fn print_dialog(file: &std::path::PathBuf) -> Result<(), String> {
 }
 
 
+
 #[cfg(target_os = "macos")]
-fn print_dialogue(file: &PathBuf) -> Result<(), String> {
+fn print_dialog(file: &PathBuf) -> Result<(), String> {
     Command::new("open")
         .args(["-a", "Preview", file.to_str().ok_or("Invalid path")?])
         .status()
@@ -163,7 +164,7 @@ fn print_dialogue(file: &PathBuf) -> Result<(), String> {
 }
 
 #[cfg(target_os = "linux")]
-fn print_dialogue(file: &PathBuf) -> Result<(), String> {
+fn print_dialog(file: &PathBuf) -> Result<(), String> {
     // Try CUPS lp with dialog
     let status = Command::new("lp")
         .arg(file.to_str().ok_or("Invalid path")?)
