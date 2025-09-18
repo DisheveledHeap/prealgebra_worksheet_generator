@@ -124,17 +124,20 @@ pub fn print_sheet(temp_dir: &TempDir, error:&mut Option<String>) {
 }
 
 #[cfg(target_os = "windows")]
-fn print_dialogue(file: &PathBuf) -> Result<(), String> {
+pub fn print_dialog(file: &std::path::PathBuf) -> Result<(), String> {
     use std::os::windows::ffi::OsStrExt;
-    use windows::Win32::UI::Shell::*;
-    use windows::Win32::Foundation::*;
+    use windows::Win32::Foundation::HWND;
+    use windows::Win32::UI::Shell::ShellExecuteW;
+    use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
     use windows::core::PCWSTR;
 
     let path: Vec<u16> = file.as_os_str().encode_wide().chain(Some(0)).collect();
+    let operation: Vec<u16> = "print".encode_utf16().chain(Some(0)).collect();
+
     unsafe {
         let result = ShellExecuteW(
-            None,
-            PCWSTR("print".encode_utf16().chain(Some(0)).collect::<Vec<u16>>().as_ptr()),
+            HWND(0),
+            PCWSTR(operation.as_ptr()),
             PCWSTR(path.as_ptr()),
             PCWSTR::null(),
             PCWSTR::null(),
@@ -148,6 +151,7 @@ fn print_dialogue(file: &PathBuf) -> Result<(), String> {
         }
     }
 }
+
 
 #[cfg(target_os = "macos")]
 fn print_dialogue(file: &PathBuf) -> Result<(), String> {
