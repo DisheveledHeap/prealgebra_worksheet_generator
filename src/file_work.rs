@@ -116,41 +116,64 @@ pub fn save_sheet(temp_dir:&TempDir, error:&mut Option<String>) {
     }
 }
 
-pub fn print_sheet(temp_dir:&TempDir) -> Result<(),String> {
+pub fn print_sheet(temp_dir: &TempDir, error:&mut Option<String>) {
     let file = temp_dir.path().join("output.pdf");
+    if let Err(e) = print_dialogue(&file) {
+        *error = Some(e);
+    } else {*error = None;}
+}
 
-    if !file.exists() {return Err(String::from("File Not yet Created"));}
+#[cfg(target_os = "windows")]
+fn print_dialogue(file: &PathBuf) -> Result<(), String> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows::Win32::UI::Shell::*;
+    use windows::Win32::Foundation::*;
+    use windows::core::PCWSTR;
 
-    #[cfg(target_os = "windows")]
-    {
-        // Opens Windows Print UI for the file
-        Command::new("rundll32")
-            .args(&["printui.dll,PrintUIEntry", "/p", file.to_str().unwrap()])
-            .status()
-            .map_err(|e| e.to_string())?;
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        // Uses AppleScript to open Preview's print dialog
-        let script = format!(
-            r#"tell application "Preview" to print POSIX file "{}""#,
-            file.display()
+    let path: Vec<u16> = file.as_os_str().encode_wide().chain(Some(0)).collect();
+    unsafe {
+        let result = ShellExecuteW(
+            None,
+            PCWSTR("print".encode_utf16().chain(Some(0)).collect::<Vec<u16>>().as_ptr()),
+            PCWSTR(path.as_ptr()),
+            PCWSTR::null(),
+            PCWSTR::null(),
+            SW_SHOWNORMAL,
         );
-        Command::new("osascript")
-            .args(&["-e", &script])
-            .status()
-            .map_err(|e| e.to_string())?;
-    }
 
-    #[cfg(target_os = "linux")]
-    {
-        // Uses CUPS' lpr command (default printer, no dialog)
-        Command::new("lpr")
-            .arg(file.to_str().unwrap())
-            .status()
-            .map_err(|e| e.to_string())?;
+        if result.0 as usize <= 32 {
+            Err(format!("Failed to open print dialog (error code {:?})", result.0))
+        } else {
+            Ok(())
+        }
     }
+}
 
+#[cfg(target_os = "macos")]
+fn print_dialogue(file: &PathBuf) -> Result<(), String> {
+    Command::new("open")
+        .args(["-a", "Preview", file.to_str().ok_or("Invalid path")?])
+        .status()
+        .map_err(|e| format!("Failed to run open: {}", e))?;
     Ok(())
+}
+
+#[cfg(target_os = "linux")]
+fn print_dialogue(file: &PathBuf) -> Result<(), String> {
+    // Try CUPS lp with dialog
+    let status = Command::new("lp")
+        .arg(file.to_str().ok_or("Invalid path")?)
+        .status();
+
+    match status {
+        Ok(s) if s.success() => Ok(()),
+        _ => {
+            // fallback: open in default PDF viewer
+            Command::new("xdg-open")
+                .arg(file.to_str().ok_or("Invalid path")?)
+                .status()
+                .map_err(|e| format!("Failed to run xdg-open: {}", e))?;
+            Ok(())
+        }
+    }
 }

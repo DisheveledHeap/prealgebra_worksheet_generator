@@ -134,33 +134,7 @@ impl eframe::App for TypstApp {
                         }
 
                         if columns[1].button("Print PDF").clicked() {
-                            print_sheet(&self.tmp_dir);
-                            // let result = {
-                            //     #[cfg(target_os = "windows")]
-                            //     {
-                            //         std::process::Command::new("rundll32")
-                            //             .args(["shell32.dll,PrintTo", cur.to_str().unwrap()])
-                            //             .spawn()
-                            //     }
-
-                            //     #[cfg(target_os = "macos")]
-                            //     {
-                            //         std::process::Command::new("lp")
-                            //             .arg(cur.to_str().unwrap())
-                            //             .spawn()
-                            //     }
-
-                            //     #[cfg(target_os = "linux")]
-                            //     {
-                            //         std::process::Command::new("lp")
-                            //             .arg(cur.to_str().unwrap())
-                            //             .spawn()
-                            //     }
-                            // };
-
-                            // if let Err(e) = result {
-                            //     self.error = Some(format!("Failed to print: {}", e));
-                            // }
+                            print_sheet(&self.tmp_dir, &mut self.error);
                         }
                     });
                     if let Some(texture) = &self.preview {
