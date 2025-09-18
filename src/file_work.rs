@@ -116,9 +116,41 @@ pub fn save_sheet(temp_dir:&TempDir, error:&mut Option<String>) {
     }
 }
 
-pub fn print_sheet(temp_dir:&TempDir) {
-    if let Some(path) = rfd::FileDialog::new().set_file_name("worksheet.pdf").save_file() {
-        let cur = temp_dir.path().join("output.pdf");
-        println!("{:?}", temp_dir);
+pub fn print_sheet(temp_dir:&TempDir) -> Result<(),String> {
+    let file = temp_dir.path().join("output.pdf");
+
+    if !file.exists() {return Err(String::from("File Not yet Created"));}
+
+    #[cfg(target_os = "windows")]
+    {
+        // Opens Windows Print UI for the file
+        Command::new("rundll32")
+            .args(&["printui.dll,PrintUIEntry", "/p", file.to_str().unwrap()])
+            .status()
+            .map_err(|e| e.to_string())?;
     }
+
+    #[cfg(target_os = "macos")]
+    {
+        // Uses AppleScript to open Preview's print dialog
+        let script = format!(
+            r#"tell application "Preview" to print POSIX file "{}""#,
+            file.display()
+        );
+        Command::new("osascript")
+            .args(&["-e", &script])
+            .status()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        // Uses CUPS' lpr command (default printer, no dialog)
+        Command::new("lpr")
+            .arg(file.to_str().unwrap())
+            .status()
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
 }
